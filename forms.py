@@ -40,7 +40,7 @@ class RegisterForm(BaseModel):
     async def save(self, session):
         first_name = self.first_name
         username = self.username
-        password = get_password_hash(self.password)
+        password = await get_password_hash(self.password)
         user = User(first_name=first_name, username=username, password=password)
         session.add(user)
         await session.commit()

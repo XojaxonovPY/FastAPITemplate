@@ -75,10 +75,11 @@ async def user_create(session: SessionDep, user: RegisterForm):
 @app.post("/token")
 async def login(session: SessionDep, form_data: LoginForm = Depends()):
     user = await get_user(session, form_data.username)
-    if not user or not verify_password(form_data.password, user.password):
+    verify=await verify_password(form_data.password, user.password)
+    if not user or not verify :
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
-    access_token = create_access_token(data={"sub": user.username})
+    access_token = await create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
 

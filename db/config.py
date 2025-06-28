@@ -50,8 +50,10 @@ class AbstractClass:
         return await session.get(cls, id_)
 
     @classmethod
-    async def query(cls, session: SessionDep, stmt):
+    async def query(cls, session: SessionDep, stmt,one=False):
         query = await session.execute(stmt)
+        if one:
+            return query.scalars().first()
         return query.scalars().all()
 
 
