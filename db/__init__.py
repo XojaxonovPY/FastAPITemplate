@@ -1,15 +1,14 @@
-import asyncio
+import os
+from os.path import join
+from pathlib import Path
 
-from sqlalchemy import Text, String
+from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlmodel import Field, SQLModel
 
-SQLALCHEMY_DATABASE_URL = 'postgresql+asyncpg://postgres:1@localhost:5432/test'
+Base_dir = Path(__file__).parent.parent
+Env_path = join(Base_dir, '.env')
+load_dotenv(Env_path)
+
+SQLALCHEMY_DATABASE_URL = os.getenv('DB_URL')
 
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
-
-
-
-
-
-
