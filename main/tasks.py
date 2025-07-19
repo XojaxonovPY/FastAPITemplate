@@ -1,15 +1,16 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
 
 from db.models import Category, Task, StatusType
 from db.sessions import SessionDep
 from instruments.forms import CategoryForm, TaskForm, TaskUpdateForm
+from instruments.login import get_current_user
 
 tasks = APIRouter()
 
 
 @tasks.post('/save/category')
-async def save_category(form: CategoryForm, session: SessionDep):
+async def save_category(form: CategoryForm, session: SessionDep,current_user:dict=Depends(get_current_user)):
     category = await Category.create(session, **dict(form))
     return category
 

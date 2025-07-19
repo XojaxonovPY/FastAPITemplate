@@ -1,16 +1,24 @@
 import datetime
 from typing import Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator, field_validator, ValidationError
 
 from db.models import StatusType, User
 from instruments.login import get_password_hash
 
 
 class CategoryForm(BaseModel):
-    name: str
-    color: str
-    icon: str
+    name: str = Field(min_length=3)
+    color: str = Field(min_length=3)
+    icon: str = Field(min_length=3)
+
+    @field_validator('icon')
+    @classmethod
+    def validate_icon(cls, value):
+        if value.startswith('http'):
+            return value
+        else:
+            raise ValueError('its not icon')
 
 
 class TaskForm(BaseModel):

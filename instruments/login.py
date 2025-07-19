@@ -17,18 +17,22 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+
 # 🔐 Parolni tekshirish (bcrypt, async-safe)
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
     return await asyncio.to_thread(pwd_context.verify, plain_password, hashed_password)
+
 
 # 🔐 Parolni xeshlash
 async def get_password_hash(password: str) -> str:
     return await asyncio.to_thread(pwd_context.hash, password)
 
+
 # 👤 Userni username orqali olish
 async def get_user(session: SessionDep, username: str) -> Optional[User]:
-    result = await User.query(session, select(User).where(User.username == username),True)
+    result = await User.query(session, select(User).where(User.username == username), True)
     return result
+
 
 # 🔑 Access token yaratish (JWT)
 async def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -38,9 +42,10 @@ async def create_access_token(data: dict, expires_delta: Optional[timedelta] = N
     token = await asyncio.to_thread(jwt.encode, to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return token
 
+
 # 🧑 Hozirgi foydalanuvchini olish
 async def get_current_user(
-    session: SessionDep, token: str = Depends(oauth2_scheme)
+        session: SessionDep, token: str = Depends(oauth2_scheme)
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
