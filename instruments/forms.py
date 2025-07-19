@@ -4,7 +4,7 @@ from typing import Union
 from pydantic import BaseModel
 
 from db.models import StatusType, User
-from login import get_password_hash
+from instruments.login import get_password_hash
 
 
 class CategoryForm(BaseModel):
