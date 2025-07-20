@@ -3,8 +3,9 @@ from http.client import HTTPException
 from fastapi import APIRouter, Depends
 
 from db.sessions import SessionDep
-from instruments.forms import RegisterForm, LoginForm
-from instruments.login import get_user, verify_password, create_access_token, get_current_user
+from instruments.forms import RegisterForm, LoginForm, TokenResponse
+from instruments.login import get_user, verify_password, create_access_token, get_current_user, create_refresh_token, \
+    verify_token
 
 login_register = APIRouter()
 
@@ -15,7 +16,7 @@ async def user_create(session: SessionDep, user: RegisterForm):
     return user
 
 
-@login_register.post("/token")
+@login_register.post("/token", response_model=TokenResponse)
 async def login(session: SessionDep, form_data: LoginForm = Depends()):
     user = await get_user(session, form_data.username)
     verify = await verify_password(form_data.password, user.password)
@@ -23,7 +24,20 @@ async def login(session: SessionDep, form_data: LoginForm = Depends()):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
     access_token = await create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = await create_refresh_token(data={"sub": user.username})
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+
+@login_register.post("/refresh", response_model=TokenResponse)
+async def refresh_token(refresh_token: str):
+    payload = await verify_token(refresh_token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    user_data = {"sub": payload["sub"]}
+    new_access_token = await create_access_token(user_data)
+    new_refresh_token = await create_refresh_token(user_data)
+    return {"access_token": new_access_token, "refresh_token": new_refresh_token}
 
 
 @login_register.get("/users/me")
