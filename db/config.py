@@ -32,25 +32,21 @@ class AbstractClass:
         return True
 
     @classmethod
-    async def get_all(cls, session: SessionDep,sorted_by:list[str]=None):
-        stmt =select(cls)
+    async def get_all(cls, session: SessionDep, sorted_by: list[str] = None):
+        stmt = select(cls)
         if sorted_by:
             stmt = stmt.order_by(*sorted_by)
         result = await session.execute(stmt)
         return result.scalars().all()
 
     @classmethod
-    async def gets(cls, session: SessionDep, filter_column, value):
-        stmt = select(cls).where(filter_column == value)
+    async def get(cls, session: SessionDep, filter_column, filter_value, all_=False):
+        stmt = select(cls).where(filter_column == filter_value)
         result = await session.execute(stmt)
-        return result.scalars().all()
+        return result.scalars().first() if all_ else result.scalars().all()
 
     @classmethod
-    async def get(cls, session: SessionDep, id_: int):
-        return await session.get(cls, id_)
-
-    @classmethod
-    async def query(cls, session: SessionDep, stmt,one=False):
+    async def query(cls, session: SessionDep, stmt, one=False):
         query = await session.execute(stmt)
         if one:
             return query.scalars().first()
@@ -76,5 +72,3 @@ class CreatedModel(SQLModel, AbstractClass, table=False):
             "nullable": False,
         },
     )
-
-

@@ -29,7 +29,7 @@ async def get_password_hash(password: str) -> str:
 
 
 # 👤 Userni username orqali olish
-async def get_user(session: SessionDep, username: str) -> Optional[User]:
+async def get_user(session: SessionDep, username) -> Optional[User]:
     result = await User.query(session, select(User).where(User.username == username), True)
     return result
 

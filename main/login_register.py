@@ -1,11 +1,8 @@
-from http.client import HTTPException
-
-from fastapi import APIRouter, Depends
-
+from fastapi import APIRouter, Depends, HTTPException
 from db.sessions import SessionDep
 from instruments.forms import RegisterForm, LoginForm, TokenResponse
-from instruments.login import get_user, verify_password, create_access_token, get_current_user, create_refresh_token, \
-    verify_token
+from instruments.login import get_user, create_access_token, verify_password
+from instruments.login import get_current_user, create_refresh_token, verify_token
 
 login_register = APIRouter()
 
@@ -17,7 +14,7 @@ async def user_create(session: SessionDep, user: RegisterForm):
 
 
 @login_register.post("/token", response_model=TokenResponse)
-async def login(session: SessionDep, form_data: LoginForm = Depends()):
+async def login(session: SessionDep, form_data: LoginForm):
     user = await get_user(session, form_data.username)
     verify = await verify_password(form_data.password, user.password)
     if not user or not verify:
