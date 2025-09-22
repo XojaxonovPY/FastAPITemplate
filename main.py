@@ -36,3 +36,8 @@ def custom_openapi():
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/token/")
 
 app.openapi = custom_openapi
+
+
+import bcrypt
+
+print(bcrypt.hashpw("3".encode(), salt=bcrypt.gensalt()))

@@ -18,7 +18,5 @@ admin.add_view(ModelView(User))
 admin.mount_to(app)
 
 
-import bcrypt
 
-print(bcrypt.hashpw("3".encode(), salt=bcrypt.gensalt()))
 
