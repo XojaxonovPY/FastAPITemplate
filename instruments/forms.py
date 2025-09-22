@@ -1,7 +1,7 @@
 import datetime
 from typing import Union
 
-from pydantic import BaseModel, Field, validator, field_validator, ValidationError
+from pydantic import BaseModel, Field, field_validator
 
 from db.models import StatusType, User
 from instruments.login import get_password_hash

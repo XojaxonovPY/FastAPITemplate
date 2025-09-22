@@ -1,4 +1,4 @@
-import os
+from os import getenv
 
 from dotenv import load_dotenv
 
@@ -8,4 +8,6 @@ load_dotenv(Env_path)
 
 
 class Settings:
-    DB_URL = os.getenv('DB_URL')
+    DB_URL = getenv('DB_URL')
+    ADMIN_USERNAME = getenv('ADMIN_USERNAME')
+    ADMIN_PASSWORD = getenv('ADMIN_PASSWORD')

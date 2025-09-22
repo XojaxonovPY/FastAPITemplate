@@ -1,15 +1,13 @@
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-
-from main.login_register import login_register
-from main.tasks import tasks
 from fastapi.security import OAuth2PasswordBearer
+
+from apps import tasks, login_register
+
 app = FastAPI(title="User API")
 
 app.include_router(tasks, prefix="/tasks", tags=["tasks"])
 app.include_router(login_register, prefix="/login", tags=["login"])
-
-
 
 
 def custom_openapi():

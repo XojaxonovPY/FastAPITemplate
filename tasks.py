@@ -19,3 +19,8 @@ def down(c):
 @task
 def create(c):
     c.run("alembic init migrations")
+
+
+@task
+def admin(c):
+    c.run('uvicorn web.apps:apps --reload')
