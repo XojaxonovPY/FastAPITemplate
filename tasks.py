@@ -23,4 +23,4 @@ def create(c):
 
 @task
 def admin(c):
-    c.run('uvicorn web.apps:apps --reload')
+    c.run('uvicorn admin.app:app --host localhost --port 8005')
