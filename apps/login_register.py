@@ -16,7 +16,7 @@ async def user_create(session: SessionDep, user: RegisterForm):
     return user
 
 
-@login_register.post("/token", response_model=TokenResponse)
+@login_register.post("/login", response_model=TokenResponse)
 async def login(session: SessionDep, form_data: LoginForm):
     user = await get_user(session, username=form_data.username)
     if not user:
