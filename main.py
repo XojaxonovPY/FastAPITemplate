@@ -5,6 +5,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.security import OAuth2PasswordBearer
 
 from apps import tasks, login_register
 from db import engine
@@ -69,7 +70,7 @@ def custom_openapi():
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login/")
 app.openapi = custom_openapi
 
 import bcrypt
