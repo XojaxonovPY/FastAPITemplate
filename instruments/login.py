@@ -1,14 +1,14 @@
 import asyncio
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Annotated, TypeAlias
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
+from apps.depends import SessionDep
 from db.models import User
-from db.sessions import SessionDep
 
 SECRET_KEY = "zqxwcevrbtynumikol123456765432"
 ALGORITHM = "HS256"
@@ -27,7 +27,7 @@ async def get_password_hash(password: str) -> str:
 
 
 async def get_user(session: SessionDep, **filter_) -> Optional[User]:
-    result = await User.get(session, **filter_)
+    result: User | None = await User.get(session, **filter_)
     return result
 
 
@@ -39,14 +39,14 @@ async def create_access_token(data: dict, expires_delta: Optional[timedelta] = N
     return token
 
 
-async def create_refresh_token(data: dict):
+async def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.now() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return await asyncio.to_thread(jwt.encode, to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-async def verify_token(token: str):
+async def verify_token(token: str) -> dict | None:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
@@ -61,14 +61,17 @@ async def get_current_user(session: SessionDep, token: str = Depends(oauth2_sche
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = await asyncio.to_thread(jwt.decode, token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: Optional[str] = payload.get("sub")
-        if username is None:
+        payload: dict = await asyncio.to_thread(jwt.decode, token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: Optional[str] = payload.get("sub")
+        if email is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    user = await get_user(session, username=username)
+    user: User | None = await get_user(session, email=email)
     if user is None:
         raise credentials_exception
     return user
+
+
+UserSession: TypeAlias = Annotated[User, Depends(get_current_user)]
