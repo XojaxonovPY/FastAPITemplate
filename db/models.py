@@ -5,7 +5,7 @@ from db.config import Model, Base
 
 
 class User(Model):
-    first_name: Mapped[str] = mapped_column(String(length=50))
+    first_name: Mapped[str] = mapped_column(String(length=50),nullable=True)
     username: Mapped[str] = mapped_column(String(length=50), unique=True)
     password: Mapped[str] = mapped_column(String(length=200))
 

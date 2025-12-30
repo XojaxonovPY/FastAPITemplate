@@ -28,18 +28,22 @@ class Manager:
             cls._handle_db_error(e)
 
     @classmethod
-    async def all_(cls, session: AsyncSession):
+    async def all_(cls, session: AsyncSession, order_by=None):
         try:
             stmt = select(cls)
+            if order_by is not None:
+                stmt = stmt.order_by(order_by)
             result = await session.execute(stmt)
             return result.scalars().all()
         except SQLAlchemyError as e:
             cls._handle_db_error(e)
 
     @classmethod
-    async def filter(cls: Type[T], session: AsyncSession, *filters):
+    async def filter(cls: Type[T], session: AsyncSession, *filters, order_by=None):
         try:
             stmt = select(cls).filter(*filters)
+            if order_by is not None:
+                stmt = stmt.order_by(order_by)
             result = await session.execute(stmt)
             return result.scalars().all()
         except SQLAlchemyError as e:

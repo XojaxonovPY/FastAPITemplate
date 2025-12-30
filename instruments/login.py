@@ -62,13 +62,13 @@ async def get_current_user(session: SessionDep, token: str = Depends(oauth2_sche
     )
     try:
         payload: dict = await asyncio.to_thread(jwt.decode, token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: Optional[str] = payload.get("sub")
-        if email is None:
+        username: Optional[str] = payload.get("sub")
+        if username is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    user: User | None = await get_user(session, email=email)
+    user: User | None = await get_user(session, username=username)
     if user is None:
         raise credentials_exception
     return user
