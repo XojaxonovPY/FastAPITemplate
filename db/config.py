@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import Type, TypeVar
+from typing import Type, TypeVar, Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, update, text, DateTime
+from sqlalchemy import Select, Update, Result, Delete, TextClause
+from sqlalchemy import select, update, text, DateTime, delete
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, DataError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, declared_attr
@@ -28,23 +29,23 @@ class Manager:
             cls._handle_db_error(e)
 
     @classmethod
-    async def all_(cls, session: AsyncSession, order_by=None):
+    async def all_(cls, session: AsyncSession, order_by: list[Any] | None = None):
         try:
-            stmt = select(cls)
+            stmt: Select[Any] = select(cls)
             if order_by is not None:
-                stmt = stmt.order_by(order_by)
-            result = await session.execute(stmt)
+                stmt = stmt.order_by(*order_by)
+            result: Result[Any] = await session.execute(stmt)
             return result.scalars().all()
         except SQLAlchemyError as e:
             cls._handle_db_error(e)
 
     @classmethod
-    async def filter(cls: Type[T], session: AsyncSession, *filters, order_by=None):
+    async def filter(cls: Type[T], session: AsyncSession, *filters, order_by: list[Any] | None = None):
         try:
-            stmt = select(cls).filter(*filters)
+            stmt: Select[Any] = select(cls).filter(*filters)
             if order_by is not None:
-                stmt = stmt.order_by(order_by)
-            result = await session.execute(stmt)
+                stmt = stmt.order_by(*order_by)
+            result: Result[Any] = await session.execute(stmt)
             return result.scalars().all()
         except SQLAlchemyError as e:
             cls._handle_db_error(e)
@@ -52,8 +53,8 @@ class Manager:
     @classmethod
     async def get(cls: Type[T], session: AsyncSession, **filters):
         try:
-            stmt = select(cls).filter_by(**filters)
-            result = await session.execute(stmt)
+            stmt: Select[Any] = select(cls).filter_by(**filters)
+            result: Result[Any] = await session.execute(stmt)
             return result.scalars().first()
         except SQLAlchemyError as e:
             cls._handle_db_error(e)
@@ -61,15 +62,10 @@ class Manager:
     @classmethod
     async def update(cls: Type[T], session: AsyncSession, id_: int, **values):
         try:
-            stmt = update(cls).filter_by(id=id_).values(**values)
-            await session.execute(stmt)
+            stmt: Update = update(cls).filter_by(id=id_).values(**values).returning(cls)
+            result: Result[Any] = await session.execute(stmt)
+            obj: Any | None = result.scalar_one_or_none()
             await session.commit()
-            obj = await session.get(cls, id_)
-            if not obj:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"{cls.__name__} with id={id_} not found"
-                )
             return obj
         except (IntegrityError, DataError, SQLAlchemyError) as e:
             await session.rollback()
@@ -78,10 +74,8 @@ class Manager:
     @classmethod
     async def delete(cls: Type[T], session: AsyncSession, id_: int):
         try:
-            obj = await session.get(cls, id_)
-            if not obj:
-                raise HTTPException(status_code=404, detail="Topilmadi")
-            await session.delete(obj)
+            stmt: Delete = delete(cls).filter_by(id=id_)
+            await session.execute(stmt)
             await session.commit()
             return True
         except SQLAlchemyError as e:
@@ -89,9 +83,9 @@ class Manager:
             cls._handle_db_error(e)
 
     @classmethod
-    async def query(cls: Type[T], session: AsyncSession, stmt, all_: bool = False):
+    async def query(cls: Type[T], session: AsyncSession, stmt: Select[Any], all_: bool = False):
         try:
-            result = await session.execute(stmt)
+            result: Result[Any] = await session.execute(stmt)
             if all_:
                 return result.scalars().all()
             return result.scalars().first()
@@ -101,8 +95,8 @@ class Manager:
     @staticmethod
     async def core_get(session: AsyncSession, query: str, **params):
         try:
-            stmt = text(query)
-            result = await session.execute(stmt, params)
+            stmt: TextClause = text(query)
+            result: Result[Any] = await session.execute(stmt, params)
             return result.mappings().all()
         except SQLAlchemyError as e:
             Manager._handle_db_error(e)
@@ -110,7 +104,7 @@ class Manager:
     @staticmethod
     async def core_commit(session: AsyncSession, query: str, **params):
         try:
-            stmt = text(query)
+            stmt: TextClause = text(query)
             await session.execute(stmt, params)
             await session.commit()
         except (IntegrityError, DataError, SQLAlchemyError) as e:

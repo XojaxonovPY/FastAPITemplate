@@ -1,7 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter
-from starlette import status
+from fastapi import APIRouter, status, Response
 
 from apps.depends import SessionDep
 from db.models import User
@@ -12,7 +11,7 @@ router = APIRouter()
 
 @router.get("/users/list", response_model=list[Optional[UserResponseSchema]], status_code=status.HTTP_200_OK)
 async def users_list(session: SessionDep) -> list[Optional[UserResponseSchema]]:
-    users = await User.all_(session, User.username.desc())
+    users = await User.all_(session, [User.id.asc()])
     return users
 
 
@@ -25,7 +24,7 @@ async def get_user(session: SessionDep, username: str) -> Optional[UserResponseS
 
 @router.get('/user/', response_model=list[Optional[UserResponseSchema]], status_code=status.HTTP_200_OK)
 async def get_user(session: SessionDep, first_name: Optional[str] = None) -> list[Optional[UserResponseSchema]]:
-    user = await User.filter(session, User.first_name == first_name)
+    user = await User.filter(session, User.first_name == first_name, order_by=[User.id.desc()])
     return user
 
 
@@ -33,3 +32,9 @@ async def get_user(session: SessionDep, first_name: Optional[str] = None) -> lis
 async def update_user(session: SessionDep, pk: int, user_data: UserSchema) -> User:
     user = await User.update(session, pk, **user_data.model_dump(exclude_unset=True))
     return user
+
+
+@router.delete('/user/{pk}', status_code=status.HTTP_205_RESET_CONTENT)
+async def delete_user(session: SessionDep, pk: int) -> Response:
+    await User.delete(session, pk)
+    return Response(status_code=status.HTTP_205_RESET_CONTENT)
