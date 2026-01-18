@@ -60,9 +60,9 @@ class Manager:
             cls._handle_db_error(e)
 
     @classmethod
-    async def update(cls: Type[T], session: AsyncSession, id_: int, **values):
+    async def update(cls: Type[T], session: AsyncSession, filter_: dict[Any, Any], **values):
         try:
-            stmt: Update = update(cls).filter_by(id=id_).values(**values).returning(cls)
+            stmt: Update = update(cls).filter_by(**filter_).values(**values).returning(cls)
             result: Result[Any] = await session.execute(stmt)
             obj: Any | None = result.scalar_one_or_none()
             await session.commit()
@@ -72,9 +72,9 @@ class Manager:
             cls._handle_db_error(e)
 
     @classmethod
-    async def delete(cls: Type[T], session: AsyncSession, id_: int):
+    async def delete(cls: Type[T], session: AsyncSession, filter_: dict[Any, Any]):
         try:
-            stmt: Delete = delete(cls).filter_by(id=id_)
+            stmt: Delete = delete(cls).filter_by(**filter_)
             await session.execute(stmt)
             await session.commit()
             return True
