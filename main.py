@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.security import OAuth2PasswordBearer
 
+from admin.app import admin
 from apps import main_router
 from db import engine
 
@@ -70,3 +71,4 @@ def custom_openapi():
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login/")
 app.openapi = custom_openapi
+admin.mount_to(app)

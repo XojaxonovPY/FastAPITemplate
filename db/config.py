@@ -60,7 +60,7 @@ class Manager:
             cls._handle_db_error(e)
 
     @classmethod
-    async def update(cls: Type[T], session: AsyncSession, filter_: dict[Any, Any], **values):
+    async def update(cls: Type[T], session: AsyncSession, filter_: dict[str, Any], **values):
         try:
             stmt: Update = update(cls).filter_by(**filter_).values(**values).returning(cls)
             result: Result[Any] = await session.execute(stmt)
@@ -72,7 +72,7 @@ class Manager:
             cls._handle_db_error(e)
 
     @classmethod
-    async def delete(cls: Type[T], session: AsyncSession, filter_: dict[Any, Any]):
+    async def delete(cls: Type[T], session: AsyncSession, filter_: dict[str, Any]):
         try:
             stmt: Delete = delete(cls).filter_by(**filter_)
             await session.execute(stmt)

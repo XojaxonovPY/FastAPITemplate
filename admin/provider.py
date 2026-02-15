@@ -4,7 +4,7 @@ from starlette.responses import Response
 from starlette_admin.auth import AdminConfig, AdminUser, AuthProvider
 from starlette_admin.exceptions import FormValidationError, LoginFailed
 
-from utils.settings import Settings as conf
+from db.models import Admin
 
 
 class UsernameAndPasswordProvider(AuthProvider):
@@ -21,16 +21,16 @@ class UsernameAndPasswordProvider(AuthProvider):
             raise FormValidationError(
                 {"username": "Ensure username has at least 03 characters"}
             )
-
-        if username == conf.ADMIN_USERNAME and bcrypt.checkpw(password.encode(), conf.ADMIN_PASSWORD.encode()):
-            """Save `username` in session"""
-            request.session.update({"username": username})
+        admin: Admin | None = await Admin.check_admin(username=username)
+        if admin and bcrypt.checkpw(password.encode('utf-8'), admin.password.encode('utf-8')):
+            request.session.update({"user_id": admin.id, "username": username})
             return response
+        raise LoginFailed("Login yoki parol noto'g'ri")
 
-        raise LoginFailed("Invalid username or password")
-
-    async def is_authenticated(self, request) -> bool:
-        if request.session.get("username", None) == conf.ADMIN_USERNAME:
+    async def is_authenticated(self, request: Request) -> bool:
+        username: str = request.session.get("username", None)
+        admin = await Admin.check_admin(username=username)
+        if admin:
             username = request.session["username"]
             request.state.user = username
             return True
