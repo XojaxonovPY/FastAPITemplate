@@ -5,8 +5,8 @@ from fastapi.responses import JSONResponse
 
 from apps.depends import SessionDep
 from db.models import User
-from instruments.login import create_refresh_token, verify_token, get_password_hash, UserSession
-from instruments.login import get_user, create_access_token, verify_password
+from services.login import create_refresh_token, verify_token, get_password_hash, UserSession
+from services.login import get_user, create_access_token, verify_password
 from schemas import RegisterSchema, TokenResponseSchema, LoginSchema, UserResponseSchema
 
 router = APIRouter()
