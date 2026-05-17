@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from apps.login_register import router as auth
+from apps.auth import router as auth
 from apps.tasks import router as tasks
 
 main_router = APIRouter()

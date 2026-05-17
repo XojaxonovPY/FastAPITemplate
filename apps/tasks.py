@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.get("/users/list", response_model=list[Optional[UserResponseSchema]], status_code=status.HTTP_200_OK)
 async def users_list(session: SessionDep) -> list[Optional[UserResponseSchema]]:
-    users = await User.all_(session, [User.id.asc()])
+    users = await User.get_all(session, [User.id.asc()])
     return users
 
 
@@ -24,7 +24,7 @@ async def get_user(session: SessionDep, username: str) -> Optional[UserResponseS
 
 @router.get('/user/', response_model=list[Optional[UserResponseSchema]], status_code=status.HTTP_200_OK)
 async def get_user(session: SessionDep, first_name: Optional[str] = None) -> list[Optional[UserResponseSchema]]:
-    user = await User.filter(session, User.first_name == first_name, order_by=[User.id.desc()])
+    user = await User.get_filter(session, User.first_name == first_name, order_by=[User.id.desc()])
     return user
 
 
