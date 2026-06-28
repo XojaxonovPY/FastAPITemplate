@@ -8,8 +8,9 @@ from fastapi.openapi.utils import get_openapi
 from starlette.middleware import Middleware
 
 from admin.app import admin
-from apps import main_router
+from apps import main_router, exception_handler
 from db import engine
+from db.config import Base
 
 
 # ==========================================
@@ -17,6 +18,8 @@ from db import engine
 # ==========================================
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     yield
     await engine.dispose()
 
@@ -31,9 +34,8 @@ middlewares = [
     )
 ]
 
-
 app = FastAPI(
-    title="User API",
+    title="Fast API",
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",
@@ -91,3 +93,4 @@ def custom_openapi():
 
 
 app.openapi = custom_openapi
+exception_handler(app)

@@ -11,7 +11,7 @@ class LoginSchema(BaseModel):
 class RegisterSchema(BaseModel):
     first_name: Optional[str] = None
     username: str
-    password: str = Field(max_length=10, min_length=3)
+    password: str = Field(max_length=10, min_length=3,default='1234')
 
 
 class UserSchema(BaseModel):

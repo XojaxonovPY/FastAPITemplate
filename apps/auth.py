@@ -23,11 +23,10 @@ BodyStr: TypeAlias = Annotated[str, Body(embed=True)]
 @router.post("/user/register", response_model=UserResponseSchema, status_code=status.HTTP_201_CREATED)
 async def user_create(session: SessionDep, user: RegisterSchema):
     hashed_password = await get_password_hash(user.password)
-
     user_data = user.model_dump(exclude_unset=True)
     user_data["password"] = hashed_password
-
-    new_user = await User.create(session, **user_data)
+    async with session.begin():
+        new_user = await User.create(session, **user_data)
     return new_user
 
 
@@ -50,7 +49,6 @@ async def login(session: SessionDep, data: LoginSchema) -> JSONResponse:
         "refresh_token": refresh_token_,
         "token_type": "bearer"
     })
-
 
 
 @router.post("/refresh", response_model=TokenResponseSchema)

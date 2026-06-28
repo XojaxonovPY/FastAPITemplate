@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from apps.auth import router as auth
+from apps.exceptions_handler import exception_handler
 from apps.tasks import router as tasks
 
 main_router = APIRouter()
