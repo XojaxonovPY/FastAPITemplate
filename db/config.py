@@ -51,7 +51,7 @@ class Manager:
             cls._handle_db_error(e)
 
     @classmethod
-    async def get_all(cls, session: AsyncSession, order_by: list[Any]):
+    async def get_all(cls, session: AsyncSession, order_by: list[Any] | None = None):
         try:
             stmt = select(cls)
             if order_by is not None:

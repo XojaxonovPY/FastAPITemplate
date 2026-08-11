@@ -6,10 +6,9 @@ from starlette.responses import JSONResponse
 from apps.depends import SessionDep, UserSession
 from db.models import User
 from schemas import RegisterSchema, TokenResponseSchema, LoginSchema, UserResponseSchema
-from services.login import (
+from services.token import (
     get_password_hash,
     verify_password,
-    get_user,
     create_access_token,
     create_refresh_token,
     verify_token
@@ -25,8 +24,8 @@ async def user_create(session: SessionDep, user: RegisterSchema):
     hashed_password = await get_password_hash(user.password)
     user_data = user.model_dump(exclude_unset=True)
     user_data["password"] = hashed_password
-    async with session.begin():
-        new_user = await User.create(session, **user_data)
+    new_user = await User.create(session, **user_data)
+    await session.commit()
     return new_user
 
 
@@ -35,15 +34,15 @@ async def user_create(session: SessionDep, user: RegisterSchema):
 # ==========================================
 @router.post("/login", response_model=TokenResponseSchema)
 async def login(session: SessionDep, data: LoginSchema) -> JSONResponse:
-    user = await get_user(session, username=data.username)
+    user = await User.get(session, username=data.username)
     if not user or not await verify_password(data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username yoki parol noto'g'ri"
         )
 
-    access_token = await create_access_token(subject=user.id)
-    refresh_token_ = await create_refresh_token(subject=user.id)
+    access_token = create_access_token(subject=str(user.id))
+    refresh_token_ = create_refresh_token(subject=str(user.id))
     return JSONResponse({
         "access_token": access_token,
         "refresh_token": refresh_token_,
@@ -53,7 +52,7 @@ async def login(session: SessionDep, data: LoginSchema) -> JSONResponse:
 
 @router.post("/refresh", response_model=TokenResponseSchema)
 async def refresh_token(refresh_token_: BodyStr):
-    payload = await verify_token(refresh_token_)
+    payload = verify_token(refresh_token_)
 
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(
@@ -62,8 +61,8 @@ async def refresh_token(refresh_token_: BodyStr):
         )
 
     token_subject = payload["sub"]
-    new_access_token = await create_access_token(subject=token_subject)
-    new_refresh_token = await create_refresh_token(subject=token_subject)
+    new_access_token = create_access_token(subject=token_subject)
+    new_refresh_token = create_refresh_token(subject=token_subject)
 
     return JSONResponse({
         "access_token": new_access_token,
@@ -75,6 +74,6 @@ async def refresh_token(refresh_token_: BodyStr):
 # ==========================================
 # 4. JORIY FOYDALANUVCHI (ME)
 # ==========================================
-@router.get("/users/me", response_model=UserResponseSchema, status_code=status.HTTP_200_OK)
+@router.get("/users/me", response_model=UserResponseSchema)
 async def read_users_me(current_user: UserSession):
     return current_user

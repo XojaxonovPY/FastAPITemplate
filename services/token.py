@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Any
 
 import bcrypt
 import jwt
@@ -13,7 +12,7 @@ from db.sessions import get_session
 
 SECRET_KEY = "629c7d363ffa1562c4fbe09742653d9ccf149621cb662bf69746a6e6476eff63"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_DAYS = 5
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login/")
@@ -24,23 +23,22 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login/")
 # ==========================================
 
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Parolni to'g'ridan-to'g'ri bcrypt orqali tekshirish (SHA-256 aralashtirmasdan)"""
-
-    def _verify():
-        return bcrypt.checkpw(
-            plain_password.encode("utf-8"),
-            hashed_password.encode("utf-8")
-        )
-
-    return await asyncio.to_thread(_verify)
+    """Parolni to'g'ridan-to'g'ri bcrypt orqali tekshirish"""
+    return await asyncio.to_thread(
+        bcrypt.checkpw,
+        plain_password.encode("utf-8"),
+        hashed_password.encode("utf-8")
+    )
 
 
 async def get_password_hash(password: str) -> str:
     """Xavfsiz salt bilan parolni xeshirlash"""
 
     def _hash():
-        salt = bcrypt.gensalt()
-        return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+        return bcrypt.hashpw(
+            password.encode("utf-8"),
+            bcrypt.gensalt()
+        ).decode("utf-8")
 
     return await asyncio.to_thread(_hash)
 
@@ -49,37 +47,37 @@ async def get_password_hash(password: str) -> str:
 # 2. TOKEN GENERATSIYASI (PyJWT + UTC)
 # ==========================================
 
-async def create_token(payload: dict, expires_delta: timedelta) -> str:
+def create_token(payload: dict[str, str], expires_delta: timedelta) -> str:
     """Token yaratish uchun markazlashgan xavfsiz funksiya"""
     to_encode = payload.copy()
     expire = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire})
-    return await asyncio.to_thread(jwt.encode, to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-async def create_access_token(subject: Any, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(subject: str) -> str:
     """
     subject: Foydalanuvchining ID si, emaili yoki username bo'lishi mumkin (Dinamik)
     """
-    delta = expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    return await create_token({"sub": str(subject), "type": "access"}, delta)
+    delta = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    return create_token({"sub": str(subject), "type": "access"}, delta)
 
 
-async def create_refresh_token(subject: Any) -> str:
+def create_refresh_token(subject: str) -> str:
     delta = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    return await create_token({"sub": str(subject), "type": "refresh"}, delta)
+    return create_token({"sub": str(subject), "type": "refresh"}, delta)
 
 
 # ==========================================
 # 3. TOKEN VALIDATSIYASI VA DINAMIK USER FILTRI
 # ==========================================
 
-async def verify_token(token: str) -> dict | None:
+def verify_token(token: str) -> dict:
     """Tokenni tekshirish va dekod qilish"""
     try:
-        return await asyncio.to_thread(jwt.decode, token, SECRET_KEY, algorithms=[ALGORITHM])
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.PyJWTError:
-        return None
+        return {}
 
 
 async def get_current_user(session: AsyncSession = Depends(get_session), token: str = Depends(oauth2_scheme)) -> User:
@@ -90,33 +88,16 @@ async def get_current_user(session: AsyncSession = Depends(get_session), token: 
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    payload = await verify_token(token)
+    payload = verify_token(token)
     if not payload or payload.get("type") != "access":
         raise credentials_exception
 
-    token_subject = payload.get("sub")
-    if not token_subject:
+    subject = payload.get("sub")
+    if not subject:
         raise credentials_exception
-    filter_query = {}
 
-    if token_subject.isdigit():
-        filter_query["id"] = int(token_subject)
-    elif "@" in token_subject:
-        filter_query["email"] = token_subject
-    else:
-        filter_query["username"] = token_subject
-
-    user = await User.get(session, **filter_query)
+    user = await User.get(session, **{"id": int(subject)})
     if user is None:
         raise credentials_exception
 
     return user
-
-
-# ==========================================
-# 4. JOZIRGI USERNI BERISH
-# ==========================================
-
-async def get_user(session: AsyncSession, **filter_) -> Optional[User]:
-    result: User | None = await User.get(session, **filter_)
-    return result

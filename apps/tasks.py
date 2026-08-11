@@ -29,13 +29,11 @@ async def get_user(session: SessionDep, first_name: Optional[str] = None) -> lis
 
 @router.patch('/user/{pk}', response_model=UserResponseSchema, status_code=status.HTTP_200_OK)
 async def update_user(session: SessionDep, pk: int, user_data: UserSchema) -> User:
-    async with session.begin():
-        user = await User.update(session, {"id": pk}, **user_data.model_dump(exclude_unset=True))
+    user = await User.update(session, {"id": pk}, **user_data.model_dump(exclude_unset=True))
     return user
 
 
-@router.delete('/user/{pk}', status_code=status.HTTP_205_RESET_CONTENT)
-async def delete_user(session: SessionDep, pk: int) -> Response:
-    async with session.begin():
-        await User.delete(session, {"id": pk})
-    return Response(status_code=status.HTTP_205_RESET_CONTENT)
+@router.delete('/user/{pk}', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(session: SessionDep, pk: int):
+    await User.delete(session, {"id": pk})
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
