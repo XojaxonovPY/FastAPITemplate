@@ -13,3 +13,8 @@ class UserResponseSchema(BaseModel):
     id: Optional[int]
     first_name: Optional[str]
     username: Optional[str]
+
+
+class MessageSchema(BaseModel):
+    status: bool
+    message: str

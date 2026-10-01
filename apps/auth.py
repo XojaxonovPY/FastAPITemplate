@@ -5,7 +5,7 @@ from starlette.responses import JSONResponse
 
 from apps.depends import SessionDep, UserSession
 from db.models import User
-from schemas import RegisterSchema, TokenResponseSchema, LoginSchema, UserResponseSchema
+from schemas import RegisterSchema, TokenResponseSchema, LoginSchema, UserResponseSchema, MessageSchema
 from services.token import (
     get_password_hash,
     verify_password,
@@ -19,14 +19,14 @@ router = APIRouter()
 BodyStr: TypeAlias = Annotated[str, Body(embed=True)]
 
 
-@router.post("/user/register", response_model=UserResponseSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/user/register", response_model=MessageSchema, status_code=status.HTTP_201_CREATED)
 async def user_create(session: SessionDep, user: RegisterSchema):
     hashed_password = await get_password_hash(user.password)
     user_data = user.model_dump(exclude_unset=True)
     user_data["password"] = hashed_password
-    new_user = await User.create(session, **user_data)
+    new_user: int = await User.create(session, **user_data)
     await session.commit()
-    return new_user
+    return MessageSchema(status=True, message="User created successfully \nUser ID {}".format(new_user))
 
 
 # ==========================================
@@ -34,11 +34,11 @@ async def user_create(session: SessionDep, user: RegisterSchema):
 # ==========================================
 @router.post("/login", response_model=TokenResponseSchema)
 async def login(session: SessionDep, data: LoginSchema) -> JSONResponse:
-    user = await User.get(session, username=data.username)
+    user = await User.get(session, User.username == data.username)
     if not user or not await verify_password(data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username yoki parol noto'g'ri"
+            detail="Username or password incorrect."
         )
 
     access_token = create_access_token(subject=str(user.id))
@@ -55,10 +55,7 @@ async def refresh_token(refresh_token_: BodyStr):
     payload = verify_token(refresh_token_)
 
     if not payload or payload.get("type") != "refresh":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Yaroqsiz yoki muddati o'tgan refresh token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token.")
 
     token_subject = payload["sub"]
     new_access_token = create_access_token(subject=token_subject)

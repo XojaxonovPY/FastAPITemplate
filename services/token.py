@@ -84,7 +84,7 @@ async def get_current_user(session: AsyncSession = Depends(get_session), token: 
     """Foydalanuvchini token turiga qarab dinamik aniqlash funksiyasi"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Muddati o'tgan yoki noto'g'ri token",
+        detail="Invalid or expired refresh token.",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -92,11 +92,11 @@ async def get_current_user(session: AsyncSession = Depends(get_session), token: 
     if not payload or payload.get("type") != "access":
         raise credentials_exception
 
-    subject = payload.get("sub")
+    subject: str | None = payload.get("sub")
     if not subject:
         raise credentials_exception
 
-    user = await User.get(session, **{"id": int(subject)})
+    user = await User.get(session, User.id == int(subject))
     if user is None:
         raise credentials_exception
 

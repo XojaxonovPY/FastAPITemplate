@@ -5,7 +5,7 @@ from starlette.requests import Request
 from starlette_admin.contrib.sqla import Admin, ModelView
 
 from admin.provider import UsernameAndPasswordProvider
-from db import engine
+from db.engine import engine
 from db.models import User, Admin as AdminModel
 
 admin = Admin(

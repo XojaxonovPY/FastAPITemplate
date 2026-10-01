@@ -1,4 +1,3 @@
-import asyncio
 import time
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, cast, Any
@@ -10,8 +9,8 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from admin.app import admin
 from apps import main_router, exception_handler
-from db import engine
 from db.config import Base
+from db.engine import engine
 
 
 # ==========================================
@@ -43,7 +42,7 @@ app.add_middleware(
 
 # 2. Session Middleware
 app.add_middleware(
-    SessionMiddleware,
+    cast(Any, SessionMiddleware),
     secret_key="maxfiy_kalitingiz",
     max_age=14 * 24 * 60 * 60,
     same_site="lax",
