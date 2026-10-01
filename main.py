@@ -1,11 +1,12 @@
+import asyncio
 import time
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import AsyncGenerator, cast, Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from starlette.middleware import Middleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from admin.app import admin
 from apps import main_router, exception_handler
@@ -24,23 +25,29 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     await engine.dispose()
 
 
-middlewares = [
-    Middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-]
-
 app = FastAPI(
     title="Fast API",
-    version="1.0.0",
+    version="0.142.2",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
-    middleware=middlewares
+)
+
+app.add_middleware(
+    cast(Any, CORSMiddleware),
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 2. Session Middleware
+app.add_middleware(
+    SessionMiddleware,
+    secret_key="maxfiy_kalitingiz",
+    max_age=14 * 24 * 60 * 60,
+    same_site="lax",
+    https_only=False,
 )
 
 
@@ -54,10 +61,6 @@ async def add_process_time_header(request: Request, call_next):
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = f"{process_time:.4f} sec"
     return response
-
-
-app.include_router(main_router)
-admin.mount_to(app)
 
 
 # ==========================================
@@ -92,5 +95,7 @@ def custom_openapi():
     return app.openapi_schema
 
 
+app.include_router(main_router)
+admin.mount_to(app)
 app.openapi = custom_openapi
 exception_handler(app)

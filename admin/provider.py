@@ -1,7 +1,9 @@
+from typing import cast
+
 import bcrypt
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette_admin.auth import AdminConfig, AdminUser, AuthProvider
+from starlette_admin.auth import AdminUser, AuthProvider
 from starlette_admin.exceptions import FormValidationError, LoginFailed
 
 from db.models import Admin
@@ -14,8 +16,7 @@ class UsernameAndPasswordProvider(AuthProvider):
             username: str,
             password: str,
             remember_me: bool,
-            request: Request,
-            response: Response) -> Response:
+            request: Request) -> Response | None:
         if len(username) < 3:
             """Form data validation"""
             raise FormValidationError(
@@ -24,28 +25,18 @@ class UsernameAndPasswordProvider(AuthProvider):
         admin: Admin | None = await Admin.check_admin(username=username)
         if admin and bcrypt.checkpw(password.encode('utf-8'), admin.password.encode('utf-8')):
             request.session.update({"user_id": admin.id, "username": username})
-            return response
+            return None
         raise LoginFailed("Login yoki parol noto'g'ri")
 
-    async def is_authenticated(self, request: Request) -> bool:
-        username: str = request.session.get("username", None)
-        admin = await Admin.check_admin(username=username)
+    async def authenticate(self, request: Request) -> AdminUser | None:
+        username: str | None = request.session.get("username", None)
+        admin: Admin | None = await Admin.check_admin(username=username)
         if admin:
             username = request.session["username"]
             request.state.user = username
-            return True
-        return False
+            return AdminUser(username=cast(str,username))
+        return None
 
-    def get_admin_config(self, request: Request) -> AdminConfig:
-        return AdminConfig(
-            app_title="Fast API Admin"
-        )
-
-    def get_admin_user(self, request: Request) -> AdminUser:
-        user = request.state.user  # Retrieve current user
-        print(user, "====================================================")
-        return AdminUser(username=user)
-
-    async def logout(self, request: Request, response: Response) -> Response:
+    async def logout(self, request: Request):
         request.session.clear()
-        return response
+        return None

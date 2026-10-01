@@ -42,3 +42,5 @@ starlette-admin
 typing-inspection
 typing_extensions
 uvicorn
+uvloop
+httptools
