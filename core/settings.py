@@ -10,7 +10,7 @@ load_dotenv(Env_path)
 
 
 class Settings:
-    DB_URL = getenv('DB_URL')
+    DB_URL = getenv('DB_URL',"sqlite+aiosqlite:///./test.db")
     ADMIN_USERNAME = getenv('ADMIN_USERNAME')
     ADMIN_PASSWORD = getenv('ADMIN_PASSWORD')
 

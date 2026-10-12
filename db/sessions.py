@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 from db.engine import engine
@@ -16,8 +17,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             yield session
-        except Exception as e:
-            await session.rollback()
+        except SQLAlchemyError as e:
             logger.error(e)
             raise DatabaseException(message="Base error", code=502)
         finally:

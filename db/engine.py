@@ -4,4 +4,7 @@ from core.settings import Settings
 
 SQLALCHEMY_DATABASE_URL = Settings.DB_URL
 
-engine: AsyncEngine = create_async_engine(Settings.DB_URL, echo=False, future=True)
+engine: AsyncEngine = create_async_engine(
+    Settings.DB_URL, echo=False, future=True
+)
+# pool_size=20, max_overflow=10, pool_pre_ping=True

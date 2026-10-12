@@ -1,22 +1,19 @@
 import re
 from datetime import datetime
-from functools import lru_cache
-from typing import Type, TypeVar, Any, Sequence, Union
+from typing import Type, TypeVar, Any, Sequence
 
-from pydantic import BaseModel
-from sqlalchemy import DateTime, Select
+from sqlalchemy import DateTime, Select, inspect
 from sqlalchemy import select, update, delete, insert, text
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, DataError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, declared_attr, InstrumentedAttribute, load_only
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, declared_attr, InstrumentedAttribute, defer
 
 from core.settings import get_current_uzb_time
 from db.exceptions import DatabaseException, logger
 
 T = TypeVar("T", bound="Model")
 
-FIELDS = Union[type[BaseModel], Sequence[str], Sequence[InstrumentedAttribute]] | None
-
+FIELDS = Sequence[InstrumentedAttribute] | None
 RELATIONS = Sequence[Any] | None
 
 
@@ -25,44 +22,12 @@ class Base(DeclarativeBase):
 
 
 class Manager:
-    @classmethod
-    @lru_cache(maxsize=128)
-    def _get_cached_schema_attributes(
-            cls, schema_cls: type[BaseModel]
-    ) -> tuple[InstrumentedAttribute, ...]:
-        resolved = []
-        for field in schema_cls.model_fields.keys():
-            if hasattr(cls, field):
-                attr = getattr(cls, field)
-                if isinstance(attr, InstrumentedAttribute):
-                    resolved.append(attr)
-        return tuple(resolved)
-
-    @classmethod
-    def _parse_fields(cls, fields: FIELDS) -> Sequence[InstrumentedAttribute]:
-        if not fields:
-            return ()
-
-        # 1. Pydantic schema berilsa keshdan olinadi
-        if isinstance(fields, type) and issubclass(fields, BaseModel):
-            return cls._get_cached_schema_attributes(fields)
-
-        resolved = []
-        for field in fields:
-            if isinstance(field, str):
-                if hasattr(cls, field):
-                    attr = getattr(cls, field)
-                    if isinstance(attr, InstrumentedAttribute):
-                        resolved.append(attr)
-            elif isinstance(field, InstrumentedAttribute):
-                resolved.append(field)
-        return tuple(resolved)
 
     @classmethod
     def _build_select(
             cls: Type[T],
             *filters: Any,
-            fields: FIELDS = None,
+            defer_fields: FIELDS = None,
             relations: RELATIONS = None,
             order_by: Sequence[Any] | None = None,
     ) -> Select[tuple[T]]:
@@ -71,9 +36,9 @@ class Manager:
         if filters:
             stmt = stmt.where(*filters)
 
-        selected_attrs = cls._parse_fields(fields)
-        if selected_attrs:
-            stmt = stmt.options(load_only(*selected_attrs))
+        if defer_fields:
+            fields = map(lambda col: defer(col, raiseload=True), defer_fields)
+            stmt = stmt.options(*fields)
 
         if relations:
             stmt = stmt.options(*relations)
@@ -93,7 +58,7 @@ class Manager:
     ) -> T | None:
         try:
             stmt = cls._build_select(
-                *filters, fields=fields, relations=relations
+                *filters, defer_fields=fields, relations=relations
             )
             result = await session.execute(stmt)
             return result.scalar_one_or_none()
@@ -114,7 +79,7 @@ class Manager:
     ) -> Sequence[T]:
         try:
             stmt = cls._build_select(
-                *filters, fields=fields, relations=relations, order_by=order_by
+                *filters, defer_fields=fields, relations=relations, order_by=order_by
             )
             if limit is not None:
                 stmt = stmt.limit(limit)
@@ -140,28 +105,35 @@ class Manager:
     @classmethod
     async def create(cls: Type[T], session: AsyncSession, **values) -> Any:
         try:
+            pk_col = inspect(cls).primary_key[0]
             dialect = session.bind.dialect.name
             stmt = insert(cls).values(**values)
             if dialect == "mysql":
                 res = await session.execute(stmt)
-                await session.flush()
-                return res.inserted_primary_key[0]
+                new_id = res.inserted_primary_key[0]
             else:
-                stmt = stmt.returning(cls.id)
+                stmt = stmt.returning(pk_col)
                 res = await session.execute(stmt)
-                await session.flush()
-                return res.scalar_one()
+                new_id = res.scalar_one()
+            await session.flush()
+            instance = cls(**values)
+            setattr(instance, pk_col.name, new_id)
+            return instance
         except SQLAlchemyError as e:
             await session.rollback()
             cls._handle_db_error(e)
 
     @classmethod
-    async def update(cls: Type[T], session: AsyncSession, *filter_, **values) -> int | None:
+    async def update(cls: Type[T], session: AsyncSession, *filter_, **values) -> tuple[int, T | None] | None:
         try:
             stmt = update(cls).where(*filter_).values(**values)
             result = await session.execute(stmt)
             await session.flush()
-            return result.rowcount
+            rowcount = result.rowcount
+            if rowcount == 0:
+                return 0, None
+            instance = cls(**values)
+            return rowcount, instance
         except SQLAlchemyError as e:
             await session.rollback()
             cls._handle_db_error(e)

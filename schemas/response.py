@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class TokenResponseSchema(BaseModel):
@@ -13,8 +13,10 @@ class UserResponseSchema(BaseModel):
     id: Optional[int]
     first_name: Optional[str]
     username: Optional[str]
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MessageSchema(BaseModel):
     status: bool
     message: str
+    user: Optional[UserResponseSchema] = None

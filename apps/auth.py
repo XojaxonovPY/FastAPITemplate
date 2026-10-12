@@ -24,9 +24,9 @@ async def user_create(session: SessionDep, user: RegisterSchema):
     hashed_password = await get_password_hash(user.password)
     user_data = user.model_dump(exclude_unset=True)
     user_data["password"] = hashed_password
-    new_user: int = await User.create(session, **user_data)
+    new_user: User = await User.create(session, **user_data)
     await session.commit()
-    return MessageSchema(status=True, message="User created successfully \nUser ID {}".format(new_user))
+    return MessageSchema(status=True, message="User created successfully \nUser ID {}".format(new_user.id))
 
 
 # ==========================================
@@ -72,5 +72,5 @@ async def refresh_token(refresh_token_: BodyStr):
 # 4. JORIY FOYDALANUVCHI (ME)
 # ==========================================
 @router.get("/users/me", response_model=UserResponseSchema)
-async def read_users_me(current_user: UserSession):
-    return current_user
+async def read_users_me(session: SessionDep, current_user: UserSession):
+    return await User.get(session, User.id == current_user)
