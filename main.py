@@ -9,8 +9,8 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from admin.app import admin
 from apps import main_router, exception_handler
-from db.config import Base
-from db.engine import engine
+from db.base import Base
+from db.sessions import engine
 
 
 # ==========================================

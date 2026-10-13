@@ -37,11 +37,11 @@ async def get_user_by_first_name(session: SessionDep, first_name: Optional[str] 
     '/user/{pk}', response_model=MessageSchema, status_code=status.HTTP_200_OK, response_model_exclude_none=True
 )
 async def update_user(session: SessionDep, pk: int, user_data: UserSchema) -> MessageSchema:
-    count, user = await User.update(session, User.id == pk, **user_data.model_dump(exclude_unset=True))
+    count = await User.update(session, User.id == pk, **user_data.model_dump(exclude_unset=True))
     if count == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     await session.commit()
-    return MessageSchema(status=True, message="User updated successfully", user=user)
+    return MessageSchema(status=True, message="User updated successfully")
 
 
 @router.delete('/user/{pk}', status_code=status.HTTP_204_NO_CONTENT)

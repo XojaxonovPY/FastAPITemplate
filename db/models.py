@@ -1,7 +1,7 @@
 from sqlalchemy import String, CHAR
 from sqlalchemy.orm import mapped_column, Mapped
 
-from db.config import Model, Base
+from db.base import Model, Base
 from db.sessions import AsyncSessionLocal
 
 
@@ -10,9 +10,9 @@ class Admin(Model):
     password: Mapped[str] = mapped_column(String(length=105))
 
     @staticmethod
-    async def check_admin(**kwargs):
+    async def check_admin(*args):
         async with AsyncSessionLocal() as session:
-            obj = await Admin.get(session, **kwargs)
+            obj = await Admin.get(session, *args)
             return obj
 
     @staticmethod

@@ -19,4 +19,3 @@ class UserResponseSchema(BaseModel):
 class MessageSchema(BaseModel):
     status: bool
     message: str
-    user: Optional[UserResponseSchema] = None

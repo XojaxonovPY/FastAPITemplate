@@ -1,6 +1,3 @@
-PORT = 8005
-HOST = localhost
-
 .PHONY: mig upg down create admin
 
 mig:
@@ -18,6 +15,5 @@ down:
 create:
 	alembic init migrations
 
-# Admin panelni ishga tushirish
-admin:
-	uvicorn admin.app:app --host $(HOST) --port $(PORT)
+run:
+	granian --interface asgi main:app --host 0.0.0.0 --port 8000 --workers 4 --loop uvloop --http 1 --access-log

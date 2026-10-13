@@ -22,7 +22,7 @@ class UsernameAndPasswordProvider(AuthProvider):
             raise FormValidationError(
                 {"username": "Ensure username has at least 03 characters"}
             )
-        admin: Admin | None = await Admin.check_admin(username=username)
+        admin: Admin | None = await Admin.check_admin(Admin.username == username)
         if admin and bcrypt.checkpw(password.encode('utf-8'), admin.password.encode('utf-8')):
             request.session.update({"user_id": admin.id, "username": username})
             return None
@@ -30,11 +30,11 @@ class UsernameAndPasswordProvider(AuthProvider):
 
     async def authenticate(self, request: Request) -> AdminUser | None:
         username: str | None = request.session.get("username", None)
-        admin: Admin | None = await Admin.check_admin(username=username)
+        admin: Admin | None = await Admin.check_admin(Admin.username == username)
         if admin:
             username = request.session["username"]
             request.state.user = username
-            return AdminUser(username=cast(str,username))
+            return AdminUser(username=cast(str, username))
         return None
 
     async def logout(self, request: Request):
